@@ -7,7 +7,9 @@ import sys
 import dbconn
 import numpy as np
 import posixpath
+import os
 import pickle
+from bbox import BB
 import geodata_export as geo
 
 
@@ -80,6 +82,27 @@ def get_passenger_totals(table, begin_time, end_time):
 
 
 
+def make_boxes(bb, stops):
+    boxes = dict()
+
+    thres = 2000
+
+    for s in stops['data']:
+        if (s['on'] < thres) and (s['off'] < thres):
+            continue
+
+        addr = bb.box_address(float(s['lat']), float(s['lon']))
+        if addr not in boxes.keys():
+            boxes[addr] = {'on': 0, 'off': 0, 'load': 0, 'metric': 0}
+
+        boxes[addr]['on'] += s['on']
+        boxes[addr]['off'] += s['off']
+        boxes[addr]['load'] += s['load']
+        boxes[addr]['metric'] = np.max([boxes[addr]['on'], boxes[addr]['off']])
+
+    return boxes
+
+
 
 
 
@@ -90,6 +113,8 @@ def get_passenger_totals(table, begin_time, end_time):
 def main(argv):
     data_file = "stop_summary.pkl"
     kml = "stop_summary.kml"
+    output = "./output"
+    shpfile = posixpath.join(output, "boxes.shp")
     table = 'actransit'
     begin_time = '2020-01-01 00:00:00'
     end_time = '2021-03-31 23:59:59'
@@ -105,7 +130,15 @@ def main(argv):
             stops = pickle.load(f)
         f.close
 
-    geo.stop_passengers_kml(kml, stops, key='off')
+    if not posixpath.isdir(output):
+        print("Making directory '{}'...".format(output))
+        os.mkdir(output)
+
+    bb = BB()
+    boxes = make_boxes(bb, stops)
+    bb.make_shapefile(boxes, shpfile)
+    print("Created shapefile '{}'!".format(shpfile))
+    #geo.stop_passengers_kml(kml, stops, key='off')
 
 
 
