@@ -85,13 +85,17 @@ def get_passenger_totals(table, begin_time, end_time):
 def make_boxes(bb, stops):
     boxes = dict()
 
-    thres = 2000
+    thres = 0
 
     for s in stops['data']:
         if (s['on'] < thres) and (s['off'] < thres):
             continue
 
-        addr = bb.box_address(float(s['lat']), float(s['lon']))
+        lat, lon = float(s['lat']), float(s['lon'])
+        if lat < 37 or lon > 121:
+            continue
+
+        addr = bb.box_address(lat, lon)
         if addr not in boxes.keys():
             boxes[addr] = {'on': 0, 'off': 0, 'load': 0, 'metric': 0}
 
@@ -112,9 +116,9 @@ def make_boxes(bb, stops):
 #==============================================================================
 def main(argv):
     data_file = "stop_summary.pkl"
-    kml = "stop_summary.kml"
     output = "./output"
     shpfile = posixpath.join(output, "boxes.shp")
+    kmlfile = posixpath.join(output, "boxes.kml")
     table = 'actransit'
     begin_time = '2020-01-01 00:00:00'
     end_time = '2021-03-31 23:59:59'
@@ -138,8 +142,9 @@ def main(argv):
     boxes = make_boxes(bb, stops)
     bb.make_shapefile(boxes, shpfile)
     print("Created shapefile '{}'!".format(shpfile))
-    #geo.stop_passengers_kml(kml, stops, key='off')
 
+    bb.make_kml(boxes, kmlfile)
+    print("Created KML file '{}'!".format(kmlfile))
 
 
 

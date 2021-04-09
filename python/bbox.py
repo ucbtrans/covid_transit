@@ -113,6 +113,65 @@ class BB:
 
 
 
+    def make_kml(self, boxes, kmlfile, key='metric', num_colors=10):
+        '''
+
+        :param boxes:
+        :param kmlfile:
+        :param key:
+        :param num_colors:
+        :return:
+        '''
+
+        min, max = 0, 0
+        for k in boxes.keys():
+            b = boxes[k]
+            min, max = np.min([min, b[key]]), np.max([max, b[key]])
+        max = 0.5 * max
+
+
+        cmap = plt.cm.get_cmap('jet')
+        c = 255
+        e = 1
+
+        try:
+            K = KML(kmlfile)
+        except IOError as err:
+            logging.error("make_kml(): Cannot open KML file \"{}\": {}.".format(kmlfile, err.strerror))
+            return
+        except:
+            logging.error("make_kml(): Cannot open KML file \"{}\": {}.".format(kmlfile, sys.exc_info()[0]))
+            return
+
+        for i in range(int(num_colors) + 1):
+            style_id = "clr{}".format(i)
+            clr = cmap(float(i) / num_colors)
+            color = "7F{:02X}{:02X}{:02X}".format(int(c * clr[2]), int(c * clr[1]), int(c * clr[0]))
+            K.style(style_id, poly_color=color)
+
+        for k in boxes.keys():
+            b = boxes[k]
+            if float(b[key]) < 2000:
+                continue
+            bb = self.box_bounds(k)
+            style_id = "#clr{}".format(np.min([num_colors, int(np.round((float(b[key])-min) * num_colors / float(max-min)))]))
+            name = "{}".format(k)
+
+            desc = ""
+            for a in b.keys():
+                if isinstance(b[a], dict) or isinstance(b[a], list):
+                    continue
+                desc += "{}: {}\n".format(a, b[a])
+
+            poly = [(bb[1], bb[0], e), (bb[1], bb[2], e), (bb[3], bb[2], e), (bb[3], bb[0], e)]
+            K.polygon(poly, name=name, description=desc, style=style_id)
+
+        K.close()
+
+        return
+
+
+
 
 
 
