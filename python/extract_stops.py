@@ -55,6 +55,7 @@ def get_stops(table, csv_file):
 # ==============================================================================
 def main(argv):
     table = 'actransit'
+    #table = 'tridelta'
     stops_csv = table + "_stops.csv"
 
     stops = get_stops(table, stops_csv)
