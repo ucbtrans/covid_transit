@@ -47,7 +47,7 @@ def get_stops(table):
 
 
 
-def get_passenger_totals(table, begin_time, end_time):
+def get_passenger_totals(table, dow, begin_time, end_time):
 
     stops = get_stops(table)
 
@@ -56,8 +56,15 @@ def get_passenger_totals(table, begin_time, end_time):
 
     conn, cur  = dbconn.get_dbconn()
 
+    dow_clause = ""
+    if dow == "wd":
+        dow_clause = "AND EXTRACT(ISODOW FROM act_stop_time)>0 AND EXTRACT(ISODOW FROM act_stop_time)<7 "
+    elif dow == "we":
+        dow_clause = "AND (EXTRACT(ISODOW FROM act_stop_time)=0 OR EXTRACT(ISODOW FROM act_stop_time)=7) "
+
     sql = "SELECT stop_id, SUM(psgr_on), SUM(psgr_off), SUM(psgr_load) FROM {} ".format(table)
-    sql += "WHERE act_stop_time>='{}' and act_stop_time<='{}' ".format(begin_time, end_time)
+    sql += "WHERE act_stop_time>='{}' AND act_stop_time<='{}' ".format(begin_time, end_time)
+    sql += dow_clause
     sql += "GROUP BY stop_id ORDER BY SUM(psgr_on);"
 
     cur.execute(sql)
@@ -147,24 +154,19 @@ def make_tracts(ct, stops):
 
 
 
+def run(args):
+    print("Running: {}".format(args))
 
+    table = args['table']
+    output = args['output']
+    dow = args['dow']
+    year = args['year']
+    sort_key = args['sort_key']
+    cut_off = args['cut_off']
+    begin_date = year + '-' + args['begin_date']
+    end_date = year + '-' + args['end_date']
 
-#==============================================================================
-# Main function
-#==============================================================================
-def main(argv):
-    table = 'actransit'
-    #table = 'tridelta'
-    year = '2020'
-    year = '2019'
-    sort_key = 'metric'
-    cut_off = 20
-    #begin_date = year + '-01-01'
-    begin_date = year + '-09-01'
-    end_date = year + '-12-31'
-
-    output = "./output"
-    prefix = begin_date + "_" + end_date + "_" + table
+    prefix = begin_date + "_" + end_date + "_" + table + "_" + dow
     data_file = prefix + "_stop_totals.pkl"
     boxes_shp = posixpath.join(output, prefix + "_boxes.shp")
     boxes_kml = posixpath.join(output, prefix + "_boxes.kml")
@@ -173,9 +175,10 @@ def main(argv):
     begin_time = begin_date + ' 00:00:00'
     end_time = end_date + ' 23:59:59'
 
-    
+    buf = "{}-{} ({})".format(table, year, dow)
+
     if not posixpath.isfile(data_file):
-        stops = get_passenger_totals(table, begin_time, end_time)
+        stops = get_passenger_totals(table, dow, begin_time, end_time)
         with open(data_file, 'wb') as f:
             pickle.dump(stops, f)
         f.close
@@ -188,6 +191,9 @@ def main(argv):
         print("Making directory '{}'...".format(output))
         os.mkdir(output)
 
+    '''
+    ### BOXES ###
+    
     bb = BB()
     boxes = make_boxes(bb, stops)
     print("Made boxes!")
@@ -201,6 +207,10 @@ def main(argv):
 
     bb.make_kml(boxes, boxes_kml, key=sort_key)
     print("Created KML file '{}'!".format(boxes_kml))
+    '''
+
+
+    ### CENSUS TRACTS ###
 
     ct = CT()
     tracts = make_tracts(ct, stops)
@@ -208,6 +218,9 @@ def main(argv):
 
     tract_list = u.dict2list(tracts)
     tract_list = sorted(tract_list, key=lambda i: i[sort_key], reverse=True)[0:cut_off]
+    for t in tract_list:
+        buf += ",{}".format(t['_key'])
+    args['summary_fp'].write(buf + "\n")
     tracts = u.list2dict(tract_list)
 
     ct.make_shapefile(tracts, tracts_shp)
@@ -215,6 +228,46 @@ def main(argv):
 
     ct.make_kml(tracts, tracts_kml, key=sort_key)
     print("Created KML file '{}'!".format(tracts_kml))
+
+
+    return
+
+
+
+
+#==============================================================================
+# Main function
+#==============================================================================
+def main(argv):
+    summary_file = "summary.csv"
+
+    cut_off = 15
+    output = "./output"
+    sort_key = "metric"
+
+    combos = [{'table': "tridelta", 'year': "2019", 'dow': "all", 'begin_date': "01-01", 'end_date': "12-31"},
+              {'table': "tridelta", 'year': "2019", 'dow': "wd", 'begin_date': "01-01", 'end_date': "12-31"},
+              {'table': "tridelta", 'year': "2019", 'dow': "we", 'begin_date': "01-01", 'end_date': "12-31"},
+              {'table': "tridelta", 'year': "2020", 'dow': "all", 'begin_date': "01-01", 'end_date': "12-31"},
+              {'table': "tridelta", 'year': "2020", 'dow': "wd", 'begin_date': "01-01", 'end_date': "12-31"},
+              {'table': "tridelta", 'year': "2020", 'dow': "we", 'begin_date': "01-01", 'end_date': "12-31"},
+              {'table': "actransit", 'year': "2019", 'dow': "all", 'begin_date': "09-01", 'end_date': "12-31"},
+              {'table': "actransit", 'year': "2019", 'dow': "wd", 'begin_date': "09-01", 'end_date': "12-31"},
+              {'table': "actransit", 'year': "2019", 'dow': "we", 'begin_date': "09-01", 'end_date': "12-31"},
+              {'table': "actransit", 'year': "2020", 'dow': "all", 'begin_date': "09-01", 'end_date': "12-31"},
+              {'table': "actransit", 'year': "2020", 'dow': "wd", 'begin_date': "09-01", 'end_date': "12-31"},
+              {'table': "actransit", 'year': "2020", 'dow': "we", 'begin_date': "09-01", 'end_date': "12-31"}]
+
+    with open(posixpath.join(output, summary_file), 'w+') as fp:
+        for c in combos:
+            c['cut_off'] = cut_off
+            c['output'] = output
+            c['sort_key'] = sort_key
+            c['summary_fp'] = fp
+
+            run(c)
+
+        fp.close()
 
 
 
