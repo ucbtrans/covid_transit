@@ -11,6 +11,7 @@ import numpy as np
 import posixpath
 import matplotlib.pyplot as plt
 import shapefile as shp
+import util
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 from kml_routines import KML
@@ -167,6 +168,7 @@ class CT:
             w.record(*tuple(rlist))
 
         w.save(shpfile)
+        util.make_wkt_projection(shpfile)
 
         return
 

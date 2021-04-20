@@ -8,9 +8,9 @@ Bounding Box routines.
 import sys
 import logging
 import numpy as np
-import scipy.ndimage as ndimage
 import matplotlib.pyplot as plt
 import shapefile as shp
+import util
 from kml_routines import KML
 
 
@@ -108,6 +108,7 @@ class BB:
             w.record(*tuple(rlist))
 
         w.save(shpfile)
+        util.make_wkt_projection(shpfile)
 
         return
 

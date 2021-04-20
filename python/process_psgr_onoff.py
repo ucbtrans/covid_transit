@@ -220,7 +220,7 @@ def run(args):
     tract_list = sorted(tract_list, key=lambda i: i[sort_key], reverse=True)[0:cut_off]
     for t in tract_list:
         buf += ",{}".format(t['_key'])
-    args['summary_fp'].write(buf + "\n")
+    args['tract_summary_fp'].write(buf + "\n")
     tracts = u.list2dict(tract_list)
 
     ct.make_shapefile(tracts, tracts_shp)
@@ -239,7 +239,8 @@ def run(args):
 # Main function
 #==============================================================================
 def main(argv):
-    summary_file = "summary.csv"
+    tract_summary_file = "tract_summary.csv"
+    route_summary_file = "route_summary.csv"
 
     cut_off = 15
     output = "./output"
@@ -258,16 +259,19 @@ def main(argv):
               {'table': "actransit", 'year': "2020", 'dow': "wd", 'begin_date': "09-01", 'end_date': "12-31"},
               {'table': "actransit", 'year': "2020", 'dow': "we", 'begin_date': "09-01", 'end_date': "12-31"}]
 
-    with open(posixpath.join(output, summary_file), 'w+') as fp:
-        for c in combos:
-            c['cut_off'] = cut_off
-            c['output'] = output
-            c['sort_key'] = sort_key
-            c['summary_fp'] = fp
+    tfp = open(posixpath.join(output, tract_summary_file), 'w+')
+    rfp = open(posixpath.join(output, route_summary_file), 'w+')
+    for c in combos:
+        c['cut_off'] = cut_off
+        c['output'] = output
+        c['sort_key'] = sort_key
+        c['tract_summary_fp'] = tfp
+        c['route_summary_fp'] = rfp
 
-            run(c)
+        run(c)
 
-        fp.close()
+    tfp.close()
+    rfp.close()
 
 
 

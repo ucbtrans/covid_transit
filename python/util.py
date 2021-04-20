@@ -3,12 +3,20 @@
 Utilities...
 
 """
+
 import sys
-import pickle
+import urllib
+import posixpath
 import re
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
+
+
+
+
+
+
 
 
 
@@ -59,7 +67,30 @@ def list2dict(l):
 
 
 
+def make_wkt_projection(shpfile, epsg_code=4326):
+    '''
+    Make projection file.
 
+    :param epsg_code: EPSG:4326 (WGS84)
+           The World Geodetic System of 1984 is the geographic coordinate system (the three-dimensional one)
+           used by GPS to express locations on the earth. WGS84 is the defined coordinate system for GeoJSON,
+           as longitude and latitude in decimal degrees.
+    :return:
+    '''
+
+    # access projection information
+    wkt = urllib.request.urlopen("http://spatialreference.org/ref/epsg/{0}/prettywkt/".format(epsg_code))
+    # remove spaces between charachters
+    remove_spaces = wkt.read().decode('utf-8').replace(" ", "")
+    # place all the text on one line
+    output = remove_spaces.replace("\n", "")
+
+    prjfile = posixpath.splitext(shpfile)[0] + ".prj"
+    with open(prjfile, 'w+') as prj:
+        prj.write(output)
+        prj.close()
+
+    return
 
 
 
